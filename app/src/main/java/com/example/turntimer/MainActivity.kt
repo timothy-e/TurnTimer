@@ -43,6 +43,9 @@ fun GameTimerScreen() {
         Player("Ryan", 900.0, Color(0xFFFF5959))
     )) }
 
+    val backgroundColor = remember { Animatable(players[0].color) }
+    val buttonColor = remember { Animatable(players[1].color) }
+
     var isRunning by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -57,7 +60,7 @@ fun GameTimerScreen() {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(players.first().color),
+        modifier = Modifier.fillMaxSize().background(backgroundColor.value),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(40.dp))
@@ -66,11 +69,13 @@ fun GameTimerScreen() {
         Box(
             modifier = Modifier
                 .size(300.dp)
-                .background(players[1 % players.size].color, shape = CircleShape)
+                .background(buttonColor.value, shape = CircleShape)
                 .clickable {
                     coroutineScope.launch {
                         isRunning = false
                         players = players.drop(1) + players.first()
+                        backgroundColor.animateTo(players[0].color, animationSpec = tween(500))
+                        buttonColor.animateTo(players[1].color, animationSpec = tween(500))
                     }
                 },
             contentAlignment = Alignment.Center
