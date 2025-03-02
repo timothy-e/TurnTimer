@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -46,15 +47,22 @@ fun HideStatusBarScreen() {
     }
 }
 
-class Player(val name: String, var time: Double, var color: Color)
+class Player(val name: String, var current_time: Double, val initial_time : Double, var color: Color) {
+    fun timeString(): String {
+        val minutes = (current_time / 60).toInt()
+        val seconds = (current_time % 60).toInt()
+        return String.format("%02d:%02d", minutes, seconds)
+    }
+}
+
 
 @Composable
 fun GameTimerScreen() {
     var players by remember { mutableStateOf(listOf(
-        Player("Hannah", 900.0, Color.Cyan), // 15 minutes in seconds
-        Player("Tim", 900.0, Color(0xFFA750D9)),
-        Player("Rachel", 900.0, Color(0xFFFFC14D)),
-        Player("Ryan", 900.0, Color(0xFFFF5959))
+        Player("Hannah", 900.0, 900.0, Color(0xFF5ce1e6)), // 15 minutes in seconds
+        Player("Tim", 900.0, 900.0, Color(0xFFcb6ce6)),
+        Player("Rachel", 900.0, 900.0, Color(0xffffbd59)),
+        Player("Ryan", 900.0, 900.0, Color(0xFFff5757))
     )) }
 
     val backgroundColor = remember { Animatable(players[0].color) }
@@ -65,10 +73,10 @@ fun GameTimerScreen() {
 
     LaunchedEffect(players.first()) {
         isRunning = true
-        while (isRunning && players.first().time > 0) {
+        while (isRunning && players.first().current_time > 0) {
             delay(1000L)
             players = players.toMutableList().apply {
-                this[0] = Player(this[0].name, this[0].time - 1, this[0].color)
+                this[0] = Player(this[0].name, this[0].current_time - 1, this[0].initial_time, this[0].color)
             }
         }
     }
@@ -85,6 +93,7 @@ fun GameTimerScreen() {
                 .size(300.dp)
                 .clip(CircleShape)
                 .background(buttonColor.value, shape = CircleShape)
+                .border(10.dp, players[0].color.copy(alpha = 0.5f), shape = CircleShape)
                 .clickable {
                     coroutineScope.launch {
                         isRunning = false
@@ -116,13 +125,7 @@ fun GameTimerScreen() {
                 Row(modifier = Modifier.fillMaxWidth().background(player.color).padding(16.dp).animateItem(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
-                    Text(
-                        String.format(
-                            "%02d:%02d",
-                            (player.time / 60).toInt(),
-                            (player.time % 60).toInt()
-                        ), fontSize = fontSize, fontWeight = fontWeight
-                    )
+                    Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight)
                 }
             }
         }
