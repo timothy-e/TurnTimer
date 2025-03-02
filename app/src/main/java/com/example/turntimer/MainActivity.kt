@@ -64,7 +64,7 @@ fun GameTimerScreen() {
         // Next Player Button
         Box(
             modifier = Modifier
-                .size(200.dp)
+                .size(300.dp)
                 .background(players[1 % players.size].color, shape = CircleShape)
                 .clickable {
                     coroutineScope.launch {
@@ -77,8 +77,8 @@ fun GameTimerScreen() {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("NEXT", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(players[1 % players.size].name, fontSize = 18.sp, color = Color.White)
+                Text("NEXT", fontSize = 50.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(players[1 % players.size].name, fontSize = 30.sp, color = Color.White)
             }
         }
 
@@ -95,6 +95,8 @@ fun GameTimerScreen() {
 
 @Composable
 fun PlayerRow(player: Player, isActive: Boolean) {
+    val fontSize = if (isActive) 30.sp else 20.sp
+    val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -102,7 +104,7 @@ fun PlayerRow(player: Player, isActive: Boolean) {
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(player.name, fontSize = 20.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
-        Text(String.format("%02d:%02d", (player.time / 60).toInt(), (player.time % 60).toInt()), fontSize = 20.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
+        Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
+        Text(String.format("%02d:%02d", (player.time / 60).toInt(), (player.time % 60).toInt()), fontSize = fontSize, fontWeight = fontWeight)
     }
 }
