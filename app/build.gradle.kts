@@ -59,5 +59,6 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.tooling.preview)
     debugImplementation(libs.compose.tooling)
+    implementation(libs.accompanist.systemuicontroller)
     implementation(libs.androidx.activity.compose)
 }
