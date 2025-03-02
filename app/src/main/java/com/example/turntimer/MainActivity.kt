@@ -3,10 +3,14 @@ package com.example.turntimer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,11 +36,24 @@ class Player(val name: String, var time: Double, var color: Color)
 @Composable
 fun GameTimerScreen() {
     var players by remember { mutableStateOf(listOf(
-        Player("Hannah", 14.42, Color.Cyan),
-        Player("Tim", 15.0, Color(0xFFA750D9)),
-        Player("Rachel", 15.0, Color(0xFFFFC14D)),
-        Player("Ryan", 15.0, Color(0xFFFF5959))
+        Player("Hannah", 900.0, Color.Cyan), // 15 minutes in seconds
+        Player("Tim", 900.0, Color(0xFFA750D9)),
+        Player("Rachel", 900.0, Color(0xFFFFC14D)),
+        Player("Ryan", 900.0, Color(0xFFFF5959))
     )) }
+
+    var isRunning by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(players.first()) {
+        isRunning = true
+        while (isRunning && players.first().time > 0) {
+            delay(1000L)
+            players = players.toMutableList().apply {
+                this[0] = Player(this[0].name, this[0].time - 1, this[0].color)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().background(players.first().color),
@@ -48,7 +67,12 @@ fun GameTimerScreen() {
                 .size(200.dp)
                 .background(players[1 % players.size].color, shape = CircleShape)
                 .clickable {
-                    players = players.drop(1) + players.first() // Move current player to the bottom
+                    coroutineScope.launch {
+                        isRunning = false
+                        val updatedPlayers = players.drop(1) + players.first()
+                        players = emptyList() // Force recomposition
+                        players = updatedPlayers
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -58,11 +82,13 @@ fun GameTimerScreen() {
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f)) // Spacer to push the players list to the bottom
+        Spacer(modifier = Modifier.weight(1f)) // Pushes player list to the bottom
 
         // Players List
-        players.forEachIndexed { index, player ->
-            PlayerRow(player, isActive = index == 0)
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items(players, key = { it.name }) { player ->
+                PlayerRow(player, isActive = player == players.first())
+            }
         }
     }
 }
@@ -70,10 +96,13 @@ fun GameTimerScreen() {
 @Composable
 fun PlayerRow(player: Player, isActive: Boolean) {
     Row(
-        modifier = Modifier.fillMaxWidth().background(player.color).padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(player.color)
+            .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(player.name, fontSize = 20.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
-        Text(String.format("%.2f", player.time), fontSize = 20.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
+        Text(String.format("%02d:%02d", (player.time / 60).toInt(), (player.time % 60).toInt()), fontSize = 20.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
     }
 }
