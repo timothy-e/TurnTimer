@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,19 +43,6 @@ fun GameTimerScreen() {
         Player("Ryan", 900.0, Color(0xFFFF5959))
     )) }
 
-    var isRunning by remember { mutableStateOf(true) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(players.first()) {
-        isRunning = true
-        while (isRunning && players.first().time > 0) {
-            delay(1000L)
-            players = players.toMutableList().apply {
-                this[0] = Player(this[0].name, this[0].time - 1, this[0].color)
-            }
-        }
-    }
-
     Column(
         modifier = Modifier.fillMaxSize().background(players.first().color),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -67,12 +55,7 @@ fun GameTimerScreen() {
                 .size(300.dp)
                 .background(players[1 % players.size].color, shape = CircleShape)
                 .clickable {
-                    coroutineScope.launch {
-                        isRunning = false
-                        val updatedPlayers = players.drop(1) + players.first()
-                        players = emptyList() // Force recomposition
-                        players = updatedPlayers
-                    }
+                    players = players.drop(1) + players.first()
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -87,24 +70,21 @@ fun GameTimerScreen() {
         // Players List
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
             items(players, key = { it.name }) { player ->
-                PlayerRow(player, isActive = player == players.first())
+                val isActive = player == players.first()
+                val fontSize = if (isActive) 30.sp else 20.sp
+                val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+                Row(modifier = Modifier.fillMaxWidth().background(player.color).padding(16.dp).animateItem(),
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
+                    Text(
+                        String.format(
+                            "%02d:%02d",
+                            (player.time / 60).toInt(),
+                            (player.time % 60).toInt()
+                        ), fontSize = fontSize, fontWeight = fontWeight
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-fun PlayerRow(player: Player, isActive: Boolean) {
-    val fontSize = if (isActive) 30.sp else 20.sp
-    val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(player.color)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
-        Text(String.format("%02d:%02d", (player.time / 60).toInt(), (player.time % 60).toInt()), fontSize = fontSize, fontWeight = fontWeight)
     }
 }
