@@ -76,8 +76,12 @@ fun GameTimerScreen() {
                     coroutineScope.launch {
                         isRunning = false
                         players = players.drop(1) + players.first()
-                        backgroundColor.animateTo(players[0].color, animationSpec = tween(500))
-                        buttonColor.animateTo(players[1].color, animationSpec = tween(500))
+                        launch {
+                            backgroundColor.animateTo(players[0].color, animationSpec = tween(500))
+                        }
+                        launch {
+                            buttonColor.animateTo(players[1].color, animationSpec = tween(500))
+                        }
                     }
                 },
             contentAlignment = Alignment.Center
