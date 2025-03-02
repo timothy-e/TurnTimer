@@ -43,6 +43,19 @@ fun GameTimerScreen() {
         Player("Ryan", 900.0, Color(0xFFFF5959))
     )) }
 
+    var isRunning by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(players.first()) {
+        isRunning = true
+        while (isRunning && players.first().time > 0) {
+            delay(1000L)
+            players = players.toMutableList().apply {
+                this[0] = Player(this[0].name, this[0].time - 1, this[0].color)
+            }
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().background(players.first().color),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -55,7 +68,10 @@ fun GameTimerScreen() {
                 .size(300.dp)
                 .background(players[1 % players.size].color, shape = CircleShape)
                 .clickable {
-                    players = players.drop(1) + players.first()
+                    coroutineScope.launch {
+                        isRunning = false
+                        players = players.drop(1) + players.first()
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
