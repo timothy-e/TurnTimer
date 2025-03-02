@@ -35,10 +35,9 @@ fun GameTimerScreen() {
         Player("Rachel", 15.0, Color(0xFFFFC14D)),
         Player("Ryan", 15.0, Color(0xFFFF5959))
     )) }
-    var currentPlayerIndex by remember { mutableIntStateOf(0) }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(players[currentPlayerIndex].color),
+        modifier = Modifier.fillMaxSize().background(players.first().color),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(40.dp))
@@ -47,23 +46,23 @@ fun GameTimerScreen() {
         Box(
             modifier = Modifier
                 .size(200.dp)
-                .background(players[(currentPlayerIndex + 1) % players.size].color, shape = CircleShape)
+                .background(players[1 % players.size].color, shape = CircleShape)
                 .clickable {
-                    currentPlayerIndex = (currentPlayerIndex + 1) % players.size
+                    players = players.drop(1) + players.first() // Move current player to the bottom
                 },
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("NEXT", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(players[(currentPlayerIndex + 1) % players.size].name, fontSize = 18.sp, color = Color.White)
+                Text(players[1 % players.size].name, fontSize = 18.sp, color = Color.White)
             }
         }
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.weight(1f)) // Spacer to push the players list to the bottom
 
         // Players List
         players.forEachIndexed { index, player ->
-            PlayerRow(player, isActive = index == currentPlayerIndex)
+            PlayerRow(player, isActive = index == 0)
         }
     }
 }
