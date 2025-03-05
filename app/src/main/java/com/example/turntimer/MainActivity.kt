@@ -137,20 +137,16 @@ fun GameTimerScreen() {
 
     fun setButtonColor(isRunning: Boolean) {
         coroutineScope.launch {
-            launch {
-                buttonColor.animateTo(
-                    if (isRunning) players[1].color else players[0].color.darken(
-                        darkenFactor
-                    ),
-                    animationSpec = tween(colorAnimationLength)
-                )
-            }
-            launch {
-                buttonBorderColor.animateTo(
-                    players[if (isRunning) 0 else 1].color,
-                    animationSpec = tween(colorAnimationLength)
-                )
-            }
+            buttonColor.animateTo(
+                if (isRunning) players[1].color else players[0].color.darken(darkenFactor),
+                animationSpec = tween(colorAnimationLength)
+            )
+        }
+        coroutineScope.launch {
+            buttonBorderColor.animateTo(
+                players[if (isRunning) 0 else 1].color,
+                animationSpec = tween(colorAnimationLength)
+            )
         }
     }
 
