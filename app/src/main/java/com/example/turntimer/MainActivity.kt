@@ -57,15 +57,6 @@ val darkenFactor = 0.15f
 val iconBorders = 30.dp
 val iconSize = 40.dp
 
-@Composable
-fun HideStatusBarScreen() {
-    val systemUiController = rememberSystemUiController()
-
-    LaunchedEffect(Unit) {
-        systemUiController.isStatusBarVisible = false  // Hide status bar
-    }
-}
-
 class Player(var name: String, var currentTime: Int, val initialTime: Int, var color: Color) {
     fun timeString(): String {
         val minutes = (currentTime / 60)
@@ -127,44 +118,6 @@ fun Color.darken(factor: Float): Color {
 }
 
 @Composable
-fun SettingsButton(isEditingSettings: Boolean, onClick: () -> Unit) {
-    val settingsIconRotation = remember {Animatable(0f)}
-
-    LaunchedEffect(isEditingSettings) {
-        while (isEditingSettings) {
-            settingsIconRotation.animateTo(
-                settingsIconRotation.value + 60f,
-                animationSpec = tween(500, easing = LinearEasing)
-            )
-            delay(600)
-        }
-    }
-    Icon(Icons.Default.Settings,
-        contentDescription = "Settings",
-        tint = Color.White,
-        modifier = Modifier.size(iconSize)
-            .rotate(settingsIconRotation.value)
-            .indication(remember { MutableInteractionSource() }, null)
-            .clickable { onClick() }
-    )
-}
-
-@Composable
-fun RestartButton(onClick: () -> Unit) {
-    val resetIconRotation = remember {Animatable(0f)}
-    val coroutineScope = rememberCoroutineScope()
-    Icon(Icons.Default.Refresh,
-        contentDescription = "Reset",
-        tint = Color.White,
-        modifier = Modifier.size(iconSize).rotate(resetIconRotation.value).clickable {
-            coroutineScope.launch {
-                resetIconRotation.animateTo(resetIconRotation.value + 360f, animationSpec = tween(700, easing = FastOutSlowInEasing))
-            }
-            onClick()
-        })
-}
-
-@Composable
 fun GameTimerScreen() {
     var players by remember { mutableStateOf(listOf(
         Player("Hannah", 900, 900, Color(0xFF5ce1e6)),
@@ -203,13 +156,13 @@ fun GameTimerScreen() {
 
         Row(horizontalArrangement = Arrangement.Absolute.Right) {
             Spacer(modifier = Modifier.width(iconBorders))
-            if (!isRunning)
+            if (!isRunning) {
                 SettingsButton(isEditingSettings) { isEditingSettings = !isEditingSettings }
-            Spacer(modifier = Modifier.weight(1f))
-            if (!isRunning)
+                Spacer(modifier = Modifier.weight(1f))
                 RestartButton { players = players.map { player ->
                     player.copy(currentTime = player.initialTime)
                 }}
+            }
             Spacer(modifier = Modifier.weight(1f))
             MorphingPlayPauseButton(isRunning) {
                 isRunning = !isRunning
@@ -281,25 +234,84 @@ fun GameTimerScreen() {
 
         Spacer(modifier = Modifier.weight(1f)) // Pushes player list to the bottom
 
-        // Players List
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            itemsIndexed(players) { index, player ->
-                val isActive = player == players.first()
-                val fontSize = if (isActive) 30.sp else 20.sp
-                val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
-                Row(modifier = Modifier.fillMaxWidth().background(player.color).padding(16.dp).animateItem(),
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                    if (isEditingSettings) {
-                        TextField(value = player.name, onValueChange = { newName -> players = players.toMutableList().apply {
+        PlayerList(isEditingSettings, players) { updatedPlayers -> players = updatedPlayers }
+    }
+}
+
+@Composable
+fun HideStatusBarScreen() {
+    val systemUiController = rememberSystemUiController()
+
+    LaunchedEffect(Unit) {
+        systemUiController.isStatusBarVisible = false  // Hide status bar
+    }
+}
+
+@Composable
+fun SettingsButton(isEditingSettings: Boolean, onClick: () -> Unit) {
+    val settingsIconRotation = remember {Animatable(0f)}
+
+    LaunchedEffect(isEditingSettings) {
+        while (isEditingSettings) {
+            settingsIconRotation.animateTo(
+                settingsIconRotation.value + 60f,
+                animationSpec = tween(500, easing = LinearEasing)
+            )
+            delay(600)
+        }
+    }
+    Icon(Icons.Default.Settings,
+        contentDescription = "Settings",
+        tint = Color.White,
+        modifier = Modifier.size(iconSize)
+            .rotate(settingsIconRotation.value)
+            .indication(remember { MutableInteractionSource() }, null)
+            .clickable { onClick() }
+    )
+}
+
+@Composable
+fun RestartButton(onClick: () -> Unit) {
+    val resetIconRotation = remember {Animatable(0f)}
+    val coroutineScope = rememberCoroutineScope()
+    Icon(Icons.Default.Refresh,
+        contentDescription = "Reset",
+        tint = Color.White,
+        modifier = Modifier.size(iconSize).rotate(resetIconRotation.value).clickable {
+            coroutineScope.launch {
+                resetIconRotation.animateTo(resetIconRotation.value + 360f, animationSpec = tween(700, easing = FastOutSlowInEasing))
+            }
+            onClick()
+        })
+}
+
+
+@Composable
+fun PlayerList(isEditingSettings: Boolean, players: List<Player>, onPlayersChange: (List<Player>) -> Unit) {
+    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+        itemsIndexed(players) { index, player ->
+            val isActive = player == players.first()
+            val fontSize = if (isActive) 30.sp else 20.sp
+            val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+            Row(modifier = Modifier.fillMaxWidth().background(player.color).padding(16.dp).animateItem(),
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                if (isEditingSettings) {
+                    TextField(value = player.name, onValueChange = { newName ->
+                        onPlayersChange(players.toMutableList().apply {
                             this[index] = this[index].copy(name = newName)
-                        }})
-                        TextField(player.currentTime.toString(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), onValueChange = { newTime -> players = players.toMutableList().apply {
-                            this[index] = this[index].copy(initialTime = newTime.toIntOrNull() ?: 0, currentTime = newTime.toIntOrNull() ?: 0)
-                        }})
-                    } else {
-                        Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
-                        Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight)
-                    }
+                        })
+                    })
+                    TextField(player.currentTime.toString(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), onValueChange = { newTime ->
+                        onPlayersChange(players.toMutableList().apply {
+                            this[index] = this[index].copy(
+                                initialTime = newTime.toIntOrNull() ?: 0,
+                                currentTime = newTime.toIntOrNull() ?: 0
+                            )
+                        })
+                    })
+                } else {
+                    Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
+                    Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight)
                 }
             }
         }
