@@ -1,7 +1,6 @@
 package com.example.turntimer
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
@@ -14,7 +13,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +32,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.graphics.Path
@@ -130,6 +127,29 @@ fun Color.darken(factor: Float): Color {
 }
 
 @Composable
+fun SettingsButton(isEditingSettings: Boolean, onClick: () -> Unit) {
+    val settingsIconRotation = remember {Animatable(0f)}
+
+    LaunchedEffect(isEditingSettings) {
+        while (isEditingSettings) {
+            settingsIconRotation.animateTo(
+                settingsIconRotation.value + 60f,
+                animationSpec = tween(500, easing = LinearEasing)
+            )
+            delay(600)
+        }
+    }
+    Icon(Icons.Default.Settings,
+        contentDescription = "Settings",
+        tint = Color.White,
+        modifier = Modifier.size(iconSize)
+            .rotate(settingsIconRotation.value)
+            .indication(remember { MutableInteractionSource() }, null)
+            .clickable { onClick() }
+    )
+}
+
+@Composable
 fun GameTimerScreen() {
     var players by remember { mutableStateOf(listOf(
         Player("Hannah", 900, 900, Color(0xFF5ce1e6)),
@@ -141,7 +161,6 @@ fun GameTimerScreen() {
     val backgroundColor = remember { Animatable(players.first().color) }
     val buttonColor = remember { Animatable(players.first().color.darken(darkenFactor)) }
     val buttonBorderColor = remember { Animatable(players[1].color) }
-    val settingsIconRotation = remember {Animatable(0f)}
     val resetIconRotation = remember {Animatable(0f)}
 
     var isRunning by remember { mutableStateOf(false) }
@@ -161,17 +180,6 @@ fun GameTimerScreen() {
         }
     }
 
-    // Gear rotation
-    LaunchedEffect(Unit) {
-        val turnTime = 500
-        while (true) {
-            delay(turnTime.toLong())
-            if (isEditingSettings) {
-                settingsIconRotation.animateTo(settingsIconRotation.value + 60f, animationSpec = tween(turnTime, easing = LinearEasing))
-            }
-        }
-    }
-
     Column(
         modifier = Modifier.fillMaxSize().background(backgroundColor.value),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -182,24 +190,7 @@ fun GameTimerScreen() {
         Row(horizontalArrangement = Arrangement.Absolute.Right) {
             Spacer(modifier = Modifier.width(iconBorders))
             if (!isRunning)
-                Icon(Icons.Default.Settings,
-                     contentDescription = "Settings",
-                     tint = Color.White,
-                     modifier = Modifier.size(iconSize)
-                         .rotate(settingsIconRotation.value)
-                         .indication(remember { MutableInteractionSource() }, null)
-                         .clickable {
-                             coroutineScope.launch {
-                                 isEditingSettings = !isEditingSettings
-                                 while (isEditingSettings) {
-                                     settingsIconRotation.animateTo(
-                                         settingsIconRotation.value + 60f,
-                                         animationSpec = tween(500, easing = LinearEasing)
-                                     )
-                                    delay(600)
-                                 }
-                             }
-                     })
+                SettingsButton(isEditingSettings) { isEditingSettings = !isEditingSettings }
             Spacer(modifier = Modifier.weight(1f))
             if (!isRunning)
                 Icon(Icons.Default.Refresh,
