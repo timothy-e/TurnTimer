@@ -1,6 +1,7 @@
 package com.example.turntimer
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
@@ -26,12 +27,16 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.text.input.KeyboardType
 
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
@@ -60,11 +65,15 @@ fun HideStatusBarScreen() {
     }
 }
 
-class Player(val name: String, var current_time: Double, val initial_time : Double, var color: Color) {
+class Player(var name: String, var current_time: Double, val initial_time : Double, var color: Color) {
     fun timeString(): String {
         val minutes = (current_time / 60).toInt()
         val seconds = (current_time % 60).toInt()
         return String.format("%02d:%02d", minutes, seconds)
+    }
+
+    fun copy(name: String = this.name, current_time: Double = this.current_time, initial_time: Double = this.initial_time, color: Color = this.color): Player {
+        return Player(name, current_time, initial_time, color)
     }
 }
 
@@ -130,6 +139,8 @@ fun GameTimerScreen() {
     val buttonBorderColor = remember { Animatable(players[1].color) }
 
     var isRunning by remember { mutableStateOf(false) }
+    var isEditingSettings by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
 
     // Time management
@@ -137,6 +148,7 @@ fun GameTimerScreen() {
         while (true) {
             delay(1000)
             if (isRunning) {
+                Log.d("GameTimerScreen", "Updating time")
                 players = players.toMutableList().apply {
                     this[0] = Player(
                         this[0].name,
@@ -161,11 +173,25 @@ fun GameTimerScreen() {
             if (!isRunning)
                 Icon(Icons.Default.Settings,
                      contentDescription = "Settings",
-                     modifier = Modifier.size(iconSize),
+                     modifier = Modifier.size(iconSize).clickable {
+                         isEditingSettings = !isEditingSettings
+                     },
+                     tint = Color.White)
+            Spacer(modifier = Modifier.weight(1f))
+            if (!isRunning)
+                Icon(Icons.Default.Refresh,
+                     contentDescription = "Restart",
+                     modifier = Modifier.size(iconSize).clickable {
+                         players = players.map { player ->
+                             player.copy(current_time = player.initial_time)
+                         }
+                     },
                      tint = Color.White)
             Spacer(modifier = Modifier.weight(1f))
             MorphingPlayPauseButton(isRunning) {
                 isRunning = !isRunning
+                if (isEditingSettings)
+                    isEditingSettings = false
                 coroutineScope.launch {
                     launch {
                         buttonColor.animateTo(
@@ -197,6 +223,8 @@ fun GameTimerScreen() {
                 .border(10.dp, buttonBorderColor.value.copy(alpha = 0.5f), shape = CircleShape)
                 .clickable {
                     coroutineScope.launch {
+                        if (isEditingSettings)
+                            isEditingSettings = false
                         if (isRunning) {
                             players = players.drop(1) + players.first()
                             launch {
@@ -232,14 +260,33 @@ fun GameTimerScreen() {
 
         // Players List
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(players, key = { it.name }) { player ->
+            itemsIndexed(players) { index, player ->
                 val isActive = player == players.first()
                 val fontSize = if (isActive) 30.sp else 20.sp
                 val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
                 Row(modifier = Modifier.fillMaxWidth().background(player.color).padding(16.dp).animateItem(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
-                    Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight)
+                    if (isEditingSettings) {
+                        TextField(value = player.name, onValueChange = { newName -> players = players.toMutableList().apply {
+                            this[index] = Player(
+                                newName,
+                                this[index].current_time,
+                                this[index].initial_time,
+                                this[index].color
+                            )
+                        } })
+                        TextField(player.current_time.toString(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), onValueChange = { newTime -> players = players.toMutableList().apply {
+                            this[index] = Player(
+                                this[index].name,
+                                newTime.toDouble(),
+                                newTime.toDouble(),
+                                this[index].color
+                            )
+                        } })
+                    } else {
+                        Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
+                        Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight)
+                    }
                 }
             }
         }
