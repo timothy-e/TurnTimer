@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.compositeOver
@@ -46,6 +48,8 @@ class MainActivity : ComponentActivity() {
 
 val colorAnimationLength = 500
 val darkenFactor = 0.15f
+val iconBorders = 30.dp
+val iconSize = 40.dp
 
 @Composable
 fun HideStatusBarScreen() {
@@ -78,7 +82,7 @@ fun MorphingPlayPauseButton(isRunning: Boolean, onClick: () -> Unit) {
 
     Canvas(
         modifier = Modifier
-            .size(80.dp)
+            .size(iconSize)
             .clickable { onClick() }
     ) {
         val width = size.width
@@ -128,7 +132,7 @@ fun GameTimerScreen() {
     var isRunning by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    // timer
+    // Time management
     LaunchedEffect(Unit) {
         while (true) {
             delay(1000)
@@ -150,25 +154,36 @@ fun GameTimerScreen() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(iconBorders))
 
-        MorphingPlayPauseButton(isRunning) {
-            isRunning = !isRunning
-            coroutineScope.launch {
-                launch {
-                    buttonColor.animateTo(
-                        if (isRunning) players[1].color else players[0].color.darken(darkenFactor),
-                        animationSpec = tween(colorAnimationLength)
-                    )
-                }
-                launch {
-                    buttonBorderColor.animateTo(
-                        players[if (isRunning) 0 else 1].color,
-                        animationSpec = tween(colorAnimationLength)
-                    )
+        Row(horizontalArrangement = Arrangement.Absolute.Right) {
+            Spacer(modifier = Modifier.width(iconBorders))
+            if (!isRunning)
+                Icon(Icons.Default.Settings,
+                     contentDescription = "Settings",
+                     modifier = Modifier.size(iconSize),
+                     tint = Color.White)
+            Spacer(modifier = Modifier.weight(1f))
+            MorphingPlayPauseButton(isRunning) {
+                isRunning = !isRunning
+                coroutineScope.launch {
+                    launch {
+                        buttonColor.animateTo(
+                            if (isRunning) players[1].color else players[0].color.darken(
+                                darkenFactor
+                            ),
+                            animationSpec = tween(colorAnimationLength)
+                        )
+                    }
+                    launch {
+                        buttonBorderColor.animateTo(
+                            players[if (isRunning) 0 else 1].color,
+                            animationSpec = tween(colorAnimationLength)
+                        )
+                    }
                 }
             }
-
+            Spacer(modifier = Modifier.width(iconBorders))
         }
 
         Spacer(modifier = Modifier.weight(1f))
