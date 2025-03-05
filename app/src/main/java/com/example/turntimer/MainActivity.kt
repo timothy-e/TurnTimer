@@ -65,15 +65,15 @@ fun HideStatusBarScreen() {
     }
 }
 
-class Player(var name: String, var current_time: Double, val initial_time : Double, var color: Color) {
+class Player(var name: String, var currentTime: Int, val initialTime: Int, var color: Color) {
     fun timeString(): String {
-        val minutes = (current_time / 60).toInt()
-        val seconds = (current_time % 60).toInt()
+        val minutes = (currentTime / 60)
+        val seconds = (currentTime % 60)
         return String.format("%02d:%02d", minutes, seconds)
     }
 
-    fun copy(name: String = this.name, current_time: Double = this.current_time, initial_time: Double = this.initial_time, color: Color = this.color): Player {
-        return Player(name, current_time, initial_time, color)
+    fun copy(name: String = this.name, currentTime: Int = this.currentTime, initialTime: Int = this.initialTime, color: Color = this.color): Player {
+        return Player(name, currentTime, initialTime, color)
     }
 }
 
@@ -128,10 +128,10 @@ fun Color.darken(factor: Float): Color {
 @Composable
 fun GameTimerScreen() {
     var players by remember { mutableStateOf(listOf(
-        Player("Hannah", 900.0, 900.0, Color(0xFF5ce1e6)), // 15 minutes in seconds
-        Player("Tim", 900.0, 900.0, Color(0xFFcb6ce6)),
-        Player("Rachel", 900.0, 900.0, Color(0xffffbd59)),
-        Player("Ryan", 900.0, 900.0, Color(0xFFff5757))
+        Player("Hannah", 900, 900, Color(0xFF5ce1e6)),
+        Player("Tim", 900, 900, Color(0xFFcb6ce6)),
+        Player("Rachel", 900, 900, Color(0xffffbd59)),
+        Player("Ryan", 900, 900, Color(0xFFff5757))
     )) }
 
     val backgroundColor = remember { Animatable(players.first().color) }
@@ -150,12 +150,7 @@ fun GameTimerScreen() {
             if (isRunning) {
                 Log.d("GameTimerScreen", "Updating time")
                 players = players.toMutableList().apply {
-                    this[0] = Player(
-                        this[0].name,
-                        this[0].current_time - 1,
-                        this[0].initial_time,
-                        this[0].color
-                    )
+                    this[0] = this[0].copy(currentTime = this[0].currentTime - 1)
                 }
             }
         }
@@ -183,7 +178,7 @@ fun GameTimerScreen() {
                      contentDescription = "Restart",
                      modifier = Modifier.size(iconSize).clickable {
                          players = players.map { player ->
-                             player.copy(current_time = player.initial_time)
+                             player.copy(currentTime = player.initialTime)
                          }
                      },
                      tint = Color.White)
@@ -268,21 +263,11 @@ fun GameTimerScreen() {
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     if (isEditingSettings) {
                         TextField(value = player.name, onValueChange = { newName -> players = players.toMutableList().apply {
-                            this[index] = Player(
-                                newName,
-                                this[index].current_time,
-                                this[index].initial_time,
-                                this[index].color
-                            )
-                        } })
-                        TextField(player.current_time.toString(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), onValueChange = { newTime -> players = players.toMutableList().apply {
-                            this[index] = Player(
-                                this[index].name,
-                                newTime.toDouble(),
-                                newTime.toDouble(),
-                                this[index].color
-                            )
-                        } })
+                            this[index] = this[index].copy(name = newName)
+                        }})
+                        TextField(player.currentTime.toString(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), onValueChange = { newTime -> players = players.toMutableList().apply {
+                            this[index] = this[index].copy(initialTime = newTime.toIntOrNull() ?: 0, currentTime = newTime.toIntOrNull() ?: 0)
+                        }})
                     } else {
                         Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
                         Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight)
