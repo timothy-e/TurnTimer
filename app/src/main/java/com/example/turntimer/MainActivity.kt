@@ -135,6 +135,34 @@ fun GameTimerScreen() {
 
     val coroutineScope = rememberCoroutineScope()
 
+    fun setButtonColor(isRunning: Boolean) {
+        coroutineScope.launch {
+            launch {
+                buttonColor.animateTo(
+                    if (isRunning) players[1].color else players[0].color.darken(
+                        darkenFactor
+                    ),
+                    animationSpec = tween(colorAnimationLength)
+                )
+            }
+            launch {
+                buttonBorderColor.animateTo(
+                    players[if (isRunning) 0 else 1].color,
+                    animationSpec = tween(colorAnimationLength)
+                )
+            }
+        }
+    }
+
+    fun setBackgroundColor() {
+        coroutineScope.launch {
+            backgroundColor.animateTo(
+                players[0].color,
+                animationSpec = tween(colorAnimationLength)
+            )
+        }
+    }
+
     // Time management
     LaunchedEffect(Unit) {
         while (true) {
@@ -168,22 +196,7 @@ fun GameTimerScreen() {
                 isRunning = !isRunning
                 if (isEditingSettings)
                     isEditingSettings = false
-                coroutineScope.launch {
-                    launch {
-                        buttonColor.animateTo(
-                            if (isRunning) players[1].color else players[0].color.darken(
-                                darkenFactor
-                            ),
-                            animationSpec = tween(colorAnimationLength)
-                        )
-                    }
-                    launch {
-                        buttonBorderColor.animateTo(
-                            players[if (isRunning) 0 else 1].color,
-                            animationSpec = tween(colorAnimationLength)
-                        )
-                    }
-                }
+                setButtonColor(isRunning)
             }
             Spacer(modifier = Modifier.width(iconBorders))
         }
@@ -199,24 +212,13 @@ fun GameTimerScreen() {
                 .border(10.dp, buttonBorderColor.value.copy(alpha = 0.5f), shape = CircleShape)
                 .clickable {
                     coroutineScope.launch {
-                        if (isEditingSettings)
-                            isEditingSettings = false
+                        isEditingSettings = false
                         if (isRunning) {
                             players = players.drop(1) + players.first()
-                            launch {
-                                backgroundColor.animateTo(
-                                    players[0].color,
-                                    tween(colorAnimationLength)
-                                )
-                            }
+                            setBackgroundColor()
                         }
                         isRunning = true
-                        launch {
-                            buttonColor.animateTo(players[1].color, tween(colorAnimationLength))
-                        }
-                        launch {
-                            buttonBorderColor.animateTo(players[0].color, tween(colorAnimationLength))
-                        }
+                        setButtonColor(true)
                     }
                 },
             contentAlignment = Alignment.Center
