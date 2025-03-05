@@ -4,14 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +25,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.animation.core.*
+import androidx.compose.ui.util.lerp
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.drawscope.Fill
 
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
@@ -37,6 +43,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+val colorAnimationLength = 500
+val darkenFactor = 0.15f
 
 @Composable
 fun HideStatusBarScreen() {
@@ -55,6 +64,53 @@ class Player(val name: String, var current_time: Double, val initial_time : Doub
     }
 }
 
+@Composable
+fun MorphingPlayPauseButton(isRunning: Boolean, onClick: () -> Unit) {
+    val transition = remember { Animatable(if (isRunning) 0f else 1f) }
+
+    // Trigger animation when state changes
+    LaunchedEffect(isRunning) {
+        transition.animateTo(
+            targetValue = if (isRunning) 0f else 1f,
+            animationSpec = tween(400, easing = FastOutSlowInEasing)
+        )
+    }
+
+    Canvas(
+        modifier = Modifier
+            .size(80.dp)
+            .clickable { onClick() }
+    ) {
+        val width = size.width
+        val height = size.height
+        val barWidth = width * 0.25f
+
+        val leftBarX = lerp(width * 0.25f, width * 0.35f, transition.value)
+        val rightBarX = lerp(width * 0.75f, width * 0.65f, transition.value)
+        val triangleTipX = lerp(width * 0.5f, width * 0.8f, transition.value)
+        val triangleTipY = height * 0.5f
+
+        val path = Path().apply {
+            if (transition.value < 0.5f) {
+                // Pause Bars
+                addRect(androidx.compose.ui.geometry.Rect(leftBarX - barWidth / 2, 0f, leftBarX + barWidth / 2, height))
+                addRect(androidx.compose.ui.geometry.Rect(rightBarX - barWidth / 2, 0f, rightBarX + barWidth / 2, height))
+            } else {
+                // Play Triangle
+                moveTo(leftBarX, 0f)
+                lineTo(triangleTipX, triangleTipY)
+                lineTo(leftBarX, height)
+                close()
+            }
+        }
+
+        drawPath(path, Color.White, style = Fill) // Stroke for play triangle
+    }
+}
+
+fun Color.darken(factor: Float): Color {
+    return this.copy(alpha = this.alpha * (1f - factor)).compositeOver(Color.Black)
+}
 
 @Composable
 fun GameTimerScreen() {
@@ -65,18 +121,26 @@ fun GameTimerScreen() {
         Player("Ryan", 900.0, 900.0, Color(0xFFff5757))
     )) }
 
-    val backgroundColor = remember { Animatable(players[0].color) }
-    val buttonColor = remember { Animatable(players[1].color) }
+    val backgroundColor = remember { Animatable(players.first().color) }
+    val buttonColor = remember { Animatable(players.first().color.darken(darkenFactor)) }
+    val buttonBorderColor = remember { Animatable(players[1].color) }
 
-    var isRunning by remember { mutableStateOf(true) }
+    var isRunning by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(players.first()) {
-        isRunning = true
-        while (isRunning && players.first().current_time > 0) {
-            delay(1000L)
-            players = players.toMutableList().apply {
-                this[0] = Player(this[0].name, this[0].current_time - 1, this[0].initial_time, this[0].color)
+    // timer
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            if (isRunning) {
+                players = players.toMutableList().apply {
+                    this[0] = Player(
+                        this[0].name,
+                        this[0].current_time - 1,
+                        this[0].initial_time,
+                        this[0].color
+                    )
+                }
             }
         }
     }
@@ -85,7 +149,29 @@ fun GameTimerScreen() {
         modifier = Modifier.fillMaxSize().background(backgroundColor.value),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+
         Spacer(modifier = Modifier.height(40.dp))
+
+        MorphingPlayPauseButton(isRunning) {
+            isRunning = !isRunning
+            coroutineScope.launch {
+                launch {
+                    buttonColor.animateTo(
+                        if (isRunning) players[1].color else players[0].color.darken(darkenFactor),
+                        animationSpec = tween(colorAnimationLength)
+                    )
+                }
+                launch {
+                    buttonBorderColor.animateTo(
+                        players[if (isRunning) 0 else 1].color,
+                        animationSpec = tween(colorAnimationLength)
+                    )
+                }
+            }
+
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
 
         // Next Player Button
         Box(
@@ -93,24 +179,37 @@ fun GameTimerScreen() {
                 .size(300.dp)
                 .clip(CircleShape)
                 .background(buttonColor.value, shape = CircleShape)
-                .border(10.dp, players[0].color.copy(alpha = 0.5f), shape = CircleShape)
+                .border(10.dp, buttonBorderColor.value.copy(alpha = 0.5f), shape = CircleShape)
                 .clickable {
                     coroutineScope.launch {
-                        isRunning = false
-                        players = players.drop(1) + players.first()
+                        if (isRunning) {
+                            players = players.drop(1) + players.first()
+                            launch {
+                                backgroundColor.animateTo(
+                                    players[0].color,
+                                    tween(colorAnimationLength)
+                                )
+                            }
+                        }
+                        isRunning = true
                         launch {
-                            backgroundColor.animateTo(players[0].color, animationSpec = tween(500))
+                            buttonColor.animateTo(players[1].color, tween(colorAnimationLength))
                         }
                         launch {
-                            buttonColor.animateTo(players[1].color, animationSpec = tween(500))
+                            buttonBorderColor.animateTo(players[0].color, tween(colorAnimationLength))
                         }
                     }
                 },
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("NEXT", fontSize = 50.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(players[1 % players.size].name, fontSize = 30.sp, color = Color.White)
+                Text(if (isRunning) "NEXT" else "UNPAUSE",
+                     fontSize = 50.sp,
+                     fontWeight = FontWeight.Bold,
+                     color = Color.White)
+                Text(if (isRunning) players[1].name else players.first().name,
+                     fontSize = 30.sp,
+                     color = Color.White)
             }
         }
 
