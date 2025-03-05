@@ -27,11 +27,15 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.compositeOver
@@ -137,6 +141,8 @@ fun GameTimerScreen() {
     val backgroundColor = remember { Animatable(players.first().color) }
     val buttonColor = remember { Animatable(players.first().color.darken(darkenFactor)) }
     val buttonBorderColor = remember { Animatable(players[1].color) }
+    val settingsIconRotation = remember {Animatable(0f)}
+    val resetIconRotation = remember {Animatable(0f)}
 
     var isRunning by remember { mutableStateOf(false) }
     var isEditingSettings by remember { mutableStateOf(false) }
@@ -148,10 +154,20 @@ fun GameTimerScreen() {
         while (true) {
             delay(1000)
             if (isRunning) {
-                Log.d("GameTimerScreen", "Updating time")
                 players = players.toMutableList().apply {
                     this[0] = this[0].copy(currentTime = this[0].currentTime - 1)
                 }
+            }
+        }
+    }
+
+    // Gear rotation
+    LaunchedEffect(Unit) {
+        val turnTime = 500
+        while (true) {
+            delay(turnTime.toLong())
+            if (isEditingSettings) {
+                settingsIconRotation.animateTo(settingsIconRotation.value + 60f, animationSpec = tween(turnTime, easing = LinearEasing))
             }
         }
     }
@@ -168,19 +184,34 @@ fun GameTimerScreen() {
             if (!isRunning)
                 Icon(Icons.Default.Settings,
                      contentDescription = "Settings",
-                     modifier = Modifier.size(iconSize).clickable {
-                         isEditingSettings = !isEditingSettings
-                     },
-                     tint = Color.White)
+                     tint = Color.White,
+                     modifier = Modifier.size(iconSize)
+                         .rotate(settingsIconRotation.value)
+                         .indication(remember { MutableInteractionSource() }, null)
+                         .clickable {
+                             coroutineScope.launch {
+                                 isEditingSettings = !isEditingSettings
+                                 while (isEditingSettings) {
+                                     settingsIconRotation.animateTo(
+                                         settingsIconRotation.value + 60f,
+                                         animationSpec = tween(500, easing = LinearEasing)
+                                     )
+                                    delay(600)
+                                 }
+                             }
+                     })
             Spacer(modifier = Modifier.weight(1f))
             if (!isRunning)
                 Icon(Icons.Default.Refresh,
-                     contentDescription = "Restart",
+                     contentDescription = "Reset",
                      modifier = Modifier.size(iconSize).clickable {
                          players = players.map { player ->
                              player.copy(currentTime = player.initialTime)
                          }
-                     },
+                         coroutineScope.launch {
+                             resetIconRotation.animateTo(resetIconRotation.value + 360f, animationSpec = tween(700, easing = FastOutSlowInEasing))
+                         }
+                     }.rotate(resetIconRotation.value),
                      tint = Color.White)
             Spacer(modifier = Modifier.weight(1f))
             MorphingPlayPauseButton(isRunning) {
