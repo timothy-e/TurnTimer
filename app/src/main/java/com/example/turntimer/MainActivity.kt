@@ -150,6 +150,21 @@ fun SettingsButton(isEditingSettings: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
+fun RestartButton(onClick: () -> Unit) {
+    val resetIconRotation = remember {Animatable(0f)}
+    val coroutineScope = rememberCoroutineScope()
+    Icon(Icons.Default.Refresh,
+        contentDescription = "Reset",
+        tint = Color.White,
+        modifier = Modifier.size(iconSize).rotate(resetIconRotation.value).clickable {
+            coroutineScope.launch {
+                resetIconRotation.animateTo(resetIconRotation.value + 360f, animationSpec = tween(700, easing = FastOutSlowInEasing))
+            }
+            onClick()
+        })
+}
+
+@Composable
 fun GameTimerScreen() {
     var players by remember { mutableStateOf(listOf(
         Player("Hannah", 900, 900, Color(0xFF5ce1e6)),
@@ -161,7 +176,6 @@ fun GameTimerScreen() {
     val backgroundColor = remember { Animatable(players.first().color) }
     val buttonColor = remember { Animatable(players.first().color.darken(darkenFactor)) }
     val buttonBorderColor = remember { Animatable(players[1].color) }
-    val resetIconRotation = remember {Animatable(0f)}
 
     var isRunning by remember { mutableStateOf(false) }
     var isEditingSettings by remember { mutableStateOf(false) }
@@ -193,17 +207,9 @@ fun GameTimerScreen() {
                 SettingsButton(isEditingSettings) { isEditingSettings = !isEditingSettings }
             Spacer(modifier = Modifier.weight(1f))
             if (!isRunning)
-                Icon(Icons.Default.Refresh,
-                     contentDescription = "Reset",
-                     modifier = Modifier.size(iconSize).clickable {
-                         players = players.map { player ->
-                             player.copy(currentTime = player.initialTime)
-                         }
-                         coroutineScope.launch {
-                             resetIconRotation.animateTo(resetIconRotation.value + 360f, animationSpec = tween(700, easing = FastOutSlowInEasing))
-                         }
-                     }.rotate(resetIconRotation.value),
-                     tint = Color.White)
+                RestartButton { players = players.map { player ->
+                    player.copy(currentTime = player.initialTime)
+                }}
             Spacer(modifier = Modifier.weight(1f))
             MorphingPlayPauseButton(isRunning) {
                 isRunning = !isRunning
