@@ -52,8 +52,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-val colorAnimationLength = 500
-val darkenFactor = 0.15f
+const val colorAnimationLength = 500
+const val darkenFactor = 0.15f
 val iconBorders = 30.dp
 val iconSize = 40.dp
 
@@ -159,14 +159,10 @@ fun GameTimerScreen() {
         }
     }
 
-    // Time management
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1000)
-            if (isRunning) {
-                players = players.toMutableList().apply {
-                    this[0] = this[0].copy(currentTime = this[0].currentTime - 1)
-                }
+    EverySecond {
+        if (isRunning) {
+            players = players.toMutableList().apply {
+                this[0] = this[0].copy(currentTime = this[0].currentTime - 1)
             }
         }
     }
@@ -178,9 +174,10 @@ fun GameTimerScreen() {
 
         Spacer(modifier = Modifier.height(iconBorders))
 
+        // Top Buttons
         Row(horizontalArrangement = Arrangement.Absolute.Right) {
-            Spacer(modifier = Modifier.width(iconBorders))
             if (!isRunning) {
+                Spacer(modifier = Modifier.width(iconBorders))
                 SettingsButton(isEditingSettings) { isEditingSettings = !isEditingSettings }
                 Spacer(modifier = Modifier.weight(1f))
                 RestartButton { players = players.map { player ->
@@ -233,6 +230,16 @@ fun GameTimerScreen() {
         Spacer(modifier = Modifier.weight(1f)) // Pushes player list to the bottom
 
         PlayerList(isEditingSettings, players) { updatedPlayers -> players = updatedPlayers }
+    }
+}
+
+@Composable
+fun EverySecond(everySecond: () -> Unit) {
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            everySecond()
+        }
     }
 }
 
