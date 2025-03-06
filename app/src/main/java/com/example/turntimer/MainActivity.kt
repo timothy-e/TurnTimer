@@ -30,6 +30,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.draw.rotate
@@ -229,7 +232,21 @@ fun GameTimerScreen() {
 
         Spacer(modifier = Modifier.weight(1f)) // Pushes player list to the bottom
 
-        PlayerList(isEditingSettings, players) { updatedPlayers -> players = updatedPlayers }
+
+        if (isEditingSettings)
+            Row(horizontalArrangement = Arrangement.Absolute.Right) {
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(Icons.Default.Add, "Add Player", tint = Color.White, modifier = Modifier.size(iconSize).clickable {
+                    players = players + Player("New Player", players.first().initialTime, players.first().initialTime, Color.White)
+                })
+            }
+
+        PlayerList(isEditingSettings, players) { updatedPlayers ->
+            players = updatedPlayers
+            // We may need to change the background color
+            setBackgroundColor()
+            setButtonColor(isRunning)
+        }
     }
 }
 
@@ -296,17 +313,29 @@ fun PlayerList(isEditingSettings: Boolean, players: List<Player>, onPlayersChang
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(players) { index, player ->
             val isActive = player == players.first()
-            val fontSize = if (isActive) 30.sp else 20.sp
+            val fontSize = if (isActive) 50.sp else 20.sp
             val fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
-            Row(modifier = Modifier.fillMaxWidth().background(player.color).padding(16.dp).animateItem(),
-                horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(modifier = Modifier.fillMaxWidth()
+                    .background(player.color)
+                    .padding(horizontal = if (isEditingSettings) 0.dp else 16.dp, vertical = if (isEditingSettings) 8.dp else 16.dp)
+                    .animateItem(),
+                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 if (isEditingSettings) {
-                    TextField(value = player.name, onValueChange = { newName ->
+                    if (index != 0) // can't move the first player up
+                        Icon(Icons.Default.KeyboardArrowUp,
+                             contentDescription = "Move Up",
+                             tint = Color.White,
+                             modifier = Modifier.size(iconSize).clickable {
+                            onPlayersChange(players.take(index - 1) + players[index] + players[index - 1] + players.drop(index + 1))
+                        })
+                    else
+                        Spacer(modifier = Modifier.width(iconSize))
+                    TextField(value = player.name, modifier = Modifier.weight(3f), onValueChange = { newName ->
                         onPlayersChange(players.toMutableList().apply {
                             this[index] = this[index].copy(name = newName)
                         })
                     })
-                    TextField(player.currentTime.toString(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), onValueChange = { newTime ->
+                    TextField(player.currentTime.toString(), modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), onValueChange = { newTime ->
                         onPlayersChange(players.toMutableList().apply {
                             this[index] = this[index].copy(
                                 initialTime = newTime.toIntOrNull() ?: 0,
@@ -314,9 +343,18 @@ fun PlayerList(isEditingSettings: Boolean, players: List<Player>, onPlayersChang
                             )
                         })
                     })
+                    if (players.size > 2)
+                        Icon(Icons.Default.Clear,
+                             contentDescription =  "Delete Item",
+                             tint = Color.White,
+                             modifier = Modifier.size(iconSize).clickable {
+                            onPlayersChange(players.take(index) + players.drop(index + 1))
+                        })
+                    else
+                        Spacer(modifier = Modifier.size(iconSize))
                 } else {
-                    Text(player.name, fontSize = fontSize, fontWeight = fontWeight)
-                    Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight)
+                    Text(player.name, fontSize = fontSize, fontWeight = fontWeight, color = Color.White)
+                    Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight, color = Color.White)
                 }
             }
         }
