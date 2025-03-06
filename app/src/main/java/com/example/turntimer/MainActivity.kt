@@ -1,6 +1,7 @@
 package com.example.turntimer
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
@@ -54,6 +55,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+val niceColors = listOf(
+    Color(0xFFff5765),
+    Color(0xFFffdb15),
+    Color(0xFF0392cf),
+    Color(0xFF732982),
+)
 
 const val colorAnimationLength = 500
 const val darkenFactor = 0.15f
@@ -120,13 +128,32 @@ fun Color.darken(factor: Float): Color {
     return this.copy(alpha = this.alpha * (1f - factor)).compositeOver(Color.Black)
 }
 
+fun updateAvailableColors(niceColors: List<Color>): List<Color> {
+    return (niceColors + niceColors.mapIndexed {
+            index, color -> color.copy(alpha = 0.5f).compositeOver(niceColors[(index + 1) % niceColors.size])
+    }).shuffled()
+}
+
+var availableColors = updateAvailableColors(niceColors)
+
 @Composable
 fun GameTimerScreen() {
+
+    Log.i("GameTimerScreen", "Available Colors: $availableColors")
+
+    fun getAvailableColor(): Color {
+        if (availableColors.isEmpty())
+            availableColors = updateAvailableColors(niceColors)
+        val color = availableColors.first()
+        availableColors = availableColors.drop(1)
+        return color
+    }
+
     var players by remember { mutableStateOf(listOf(
-        Player("Hannah", 900, 900, Color(0xFF5ce1e6)),
-        Player("Tim", 900, 900, Color(0xFFcb6ce6)),
-        Player("Rachel", 900, 900, Color(0xffffbd59)),
-        Player("Ryan", 900, 900, Color(0xFFff5757))
+        Player("Hannah", 900, 900, getAvailableColor()),
+        Player("Tim", 900, 900, getAvailableColor()),
+        Player("Rachel", 900, 900, getAvailableColor()),
+        Player("Ryan", 900, 900, getAvailableColor())
     )) }
 
     val backgroundColor = remember { Animatable(players.first().color) }
@@ -233,11 +260,11 @@ fun GameTimerScreen() {
         Spacer(modifier = Modifier.weight(1f)) // Pushes player list to the bottom
 
 
-        if (isEditingSettings)
+        if (isEditingSettings && availableColors.isNotEmpty())
             Row(horizontalArrangement = Arrangement.Absolute.Right) {
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(Icons.Default.Add, "Add Player", tint = Color.White, modifier = Modifier.size(iconSize).clickable {
-                    players = players + Player("New Player", players.first().initialTime, players.first().initialTime, Color.White)
+                    players = players + Player("New Player", players.first().initialTime, players.first().initialTime, getAvailableColor())
                 })
             }
 
