@@ -1,7 +1,7 @@
 package com.example.turntimer
 
+import android.R.attr.fontWeight
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
@@ -41,9 +41,14 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+
+val sigmarFont = FontFamily(Font(R.font.sigmar_regular))
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,10 +62,14 @@ class MainActivity : ComponentActivity() {
 }
 
 val niceColors = listOf(
-    Color(0xFFff5765),
-    Color(0xFFffdb15),
-    Color(0xFF0392cf),
-    Color(0xFF732982),
+    Color(0xFFff595e),
+    Color(0xFFff924c),
+    Color(0xFFffca3a),
+    Color(0xFF8ac926),
+    Color(0xFF52a675),
+    Color(0xFF1982c4),
+    Color(0xFF4064a0),
+    Color(0xFF6a4c93),
 )
 
 const val colorAnimationLength = 500
@@ -129,18 +138,13 @@ fun Color.darken(factor: Float): Color {
 }
 
 fun updateAvailableColors(niceColors: List<Color>): List<Color> {
-    return (niceColors + niceColors.mapIndexed {
-            index, color -> color.copy(alpha = 0.5f).compositeOver(niceColors[(index + 1) % niceColors.size])
-    }).shuffled()
+    return niceColors.shuffled()
 }
 
 var availableColors = updateAvailableColors(niceColors)
 
 @Composable
 fun GameTimerScreen() {
-
-    Log.i("GameTimerScreen", "Available Colors: $availableColors")
-
     fun getAvailableColor(): Color {
         if (availableColors.isEmpty())
             availableColors = updateAvailableColors(niceColors)
@@ -250,10 +254,12 @@ fun GameTimerScreen() {
                 Text(if (isRunning) "NEXT" else "UNPAUSE",
                      fontSize = 50.sp,
                      fontWeight = FontWeight.Bold,
-                     color = Color.White)
+                     color = Color.White,
+                     style = TextStyle(fontFamily = sigmarFont))
                 Text(if (isRunning) players[1].name else players.first().name,
                      fontSize = 30.sp,
-                     color = Color.White)
+                     color = Color.White,
+                     style = TextStyle(fontFamily = sigmarFont))
             }
         }
 
@@ -379,9 +385,18 @@ fun PlayerList(isEditingSettings: Boolean, players: List<Player>, onPlayersChang
                         })
                     else
                         Spacer(modifier = Modifier.size(iconSize))
-                } else {
-                    Text(player.name, fontSize = fontSize, fontWeight = fontWeight, color = Color.White)
-                    Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight, color = Color.White)
+                } else if (index == 0) {
+                    Column {
+                        Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight, color = Color.White,
+                            style = TextStyle(fontFamily = sigmarFont), modifier = Modifier.padding(bottom = 0.dp))
+                        Text(player.name, fontSize = fontSize * 1.5, fontWeight = fontWeight, color = Color.White,
+                            style = TextStyle(fontFamily = sigmarFont), modifier = Modifier.padding(top = 0.dp))
+                    }
+                } else { // !isEditingSettings
+                    Text(player.name, fontSize = fontSize, fontWeight = fontWeight, color = Color.White,
+                            style = TextStyle(fontFamily = sigmarFont))
+                    Text(player.timeString(), fontSize = fontSize, fontWeight = fontWeight, color = Color.White,
+                            style = TextStyle(fontFamily = sigmarFont))
                 }
             }
         }
