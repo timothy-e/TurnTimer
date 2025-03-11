@@ -1,6 +1,5 @@
 package com.example.turntimer
 
-import android.R.attr.fontWeight
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -45,6 +44,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
 
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
@@ -184,11 +185,11 @@ fun GameTimerScreen() {
         }
     }
 
-    fun setBackgroundColor() {
+    fun setBackgroundColor(instant: Boolean = false) {
         coroutineScope.launch {
             backgroundColor.animateTo(
                 players[0].color,
-                animationSpec = tween(colorAnimationLength)
+                animationSpec = tween(if (!instant) colorAnimationLength else 0)
             )
         }
     }
@@ -213,6 +214,14 @@ fun GameTimerScreen() {
             if (!isRunning) {
                 Spacer(modifier = Modifier.width(iconBorders))
                 SettingsButton(isEditingSettings) { isEditingSettings = !isEditingSettings }
+                Spacer(modifier = Modifier.weight(1f))
+                ShuffleColorsButton { updateAvailableColors(niceColors)
+                    players = players.map { player ->
+                        player.copy(color = getAvailableColor())
+                    }
+                    setButtonColor(isRunning)
+                    setBackgroundColor(true)
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 RestartButton { players = players.map { player ->
                     player.copy(currentTime = player.initialTime)
@@ -264,7 +273,6 @@ fun GameTimerScreen() {
         }
 
         Spacer(modifier = Modifier.weight(1f)) // Pushes player list to the bottom
-
 
         if (isEditingSettings && availableColors.isNotEmpty())
             Row(horizontalArrangement = Arrangement.Absolute.Right) {
@@ -338,6 +346,15 @@ fun RestartButton(onClick: () -> Unit) {
             }
             onClick()
         })
+}
+
+@Composable
+fun ShuffleColorsButton(onClick: () -> Unit) {
+    Icon(
+        painter = painterResource(id = R.drawable.ic_shuffle), // Use a custom vector
+        contentDescription = "Shuffle",
+        tint = Color.White,
+        modifier = Modifier.size(iconSize).clickable { onClick() })
 }
 
 
