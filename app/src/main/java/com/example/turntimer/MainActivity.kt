@@ -46,8 +46,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.painterResource
-
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import androidx.activity.enableEdgeToEdge
 
 val sigmarFont = FontFamily(Font(R.font.sigmar_regular))
 
@@ -55,8 +54,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        enableEdgeToEdge()
+
         setContent {
-            HideStatusBarScreen()
             GameTimerScreen()
         }
     }
@@ -202,91 +202,113 @@ fun GameTimerScreen() {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(backgroundColor.value),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(color = backgroundColor.value)
+    )
+    {
+        Column(
+            modifier = Modifier.fillMaxSize().background(backgroundColor.value).padding(top = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
-        Spacer(modifier = Modifier.height(iconBorders))
+            Spacer(modifier = Modifier.height(iconBorders))
 
-        // Top Buttons
-        Row(horizontalArrangement = Arrangement.Absolute.Right) {
-            if (!isRunning) {
-                Spacer(modifier = Modifier.width(iconBorders))
-                SettingsButton(isEditingSettings) { isEditingSettings = !isEditingSettings }
-                Spacer(modifier = Modifier.weight(1f))
-                ShuffleColorsButton { updateAvailableColors(niceColors)
-                    players = players.map { player ->
-                        player.copy(color = getAvailableColor())
+            // Top Buttons
+            Row(horizontalArrangement = Arrangement.Absolute.Right) {
+                if (!isRunning) {
+                    Spacer(modifier = Modifier.width(iconBorders))
+                    SettingsButton(isEditingSettings) { isEditingSettings = !isEditingSettings }
+                    Spacer(modifier = Modifier.weight(1f))
+                    ShuffleColorsButton {
+                        updateAvailableColors(niceColors)
+                        players = players.map { player ->
+                            player.copy(color = getAvailableColor())
+                        }
+                        setButtonColor(isRunning)
+                        setBackgroundColor(true)
                     }
-                    setButtonColor(isRunning)
-                    setBackgroundColor(true)
+                    Spacer(modifier = Modifier.weight(1f))
+                    RestartButton {
+                        players = players.map { player ->
+                            player.copy(currentTime = player.initialTime)
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                RestartButton { players = players.map { player ->
-                    player.copy(currentTime = player.initialTime)
-                }}
+                MorphingPlayPauseButton(isRunning) {
+                    isRunning = !isRunning
+                    if (isEditingSettings)
+                        isEditingSettings = false
+                    setButtonColor(isRunning)
+                }
+                Spacer(modifier = Modifier.width(iconBorders))
             }
+
             Spacer(modifier = Modifier.weight(1f))
-            MorphingPlayPauseButton(isRunning) {
-                isRunning = !isRunning
-                if (isEditingSettings)
-                    isEditingSettings = false
+
+            // Next Player Button
+            Box(
+                modifier = Modifier
+                    .size(300.dp)
+                    .clip(CircleShape)
+                    .background(buttonColor.value, shape = CircleShape)
+                    .border(10.dp, buttonBorderColor.value.copy(alpha = 0.5f), shape = CircleShape)
+                    .clickable {
+                        coroutineScope.launch {
+                            isEditingSettings = false
+                            if (isRunning) {
+                                players = players.drop(1) + players.first()
+                                setBackgroundColor()
+                            }
+                            isRunning = true
+                            setButtonColor(true)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        if (isRunning) "NEXT" else "UNPAUSE",
+                        fontSize = 50.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        style = TextStyle(fontFamily = sigmarFont)
+                    )
+                    Text(
+                        if (isRunning) players[1].name else players.first().name,
+                        fontSize = 30.sp,
+                        color = Color.White,
+                        style = TextStyle(fontFamily = sigmarFont)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f)) // Pushes player list to the bottom
+
+            if (isEditingSettings && availableColors.isNotEmpty())
+                Row(horizontalArrangement = Arrangement.Absolute.Right) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        Icons.Default.Add,
+                        "Add Player",
+                        tint = Color.White,
+                        modifier = Modifier.size(iconSize).clickable {
+                            players = players + Player(
+                                "New Player",
+                                players.first().initialTime,
+                                players.first().initialTime,
+                                getAvailableColor()
+                            )
+                        })
+                }
+
+            PlayerList(isEditingSettings, players) { updatedPlayers ->
+                players = updatedPlayers
+                // We may need to change the background color
+                setBackgroundColor()
                 setButtonColor(isRunning)
             }
-            Spacer(modifier = Modifier.width(iconBorders))
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Next Player Button
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .clip(CircleShape)
-                .background(buttonColor.value, shape = CircleShape)
-                .border(10.dp, buttonBorderColor.value.copy(alpha = 0.5f), shape = CircleShape)
-                .clickable {
-                    coroutineScope.launch {
-                        isEditingSettings = false
-                        if (isRunning) {
-                            players = players.drop(1) + players.first()
-                            setBackgroundColor()
-                        }
-                        isRunning = true
-                        setButtonColor(true)
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(if (isRunning) "NEXT" else "UNPAUSE",
-                     fontSize = 50.sp,
-                     fontWeight = FontWeight.Bold,
-                     color = Color.White,
-                     style = TextStyle(fontFamily = sigmarFont))
-                Text(if (isRunning) players[1].name else players.first().name,
-                     fontSize = 30.sp,
-                     color = Color.White,
-                     style = TextStyle(fontFamily = sigmarFont))
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f)) // Pushes player list to the bottom
-
-        if (isEditingSettings && availableColors.isNotEmpty())
-            Row(horizontalArrangement = Arrangement.Absolute.Right) {
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(Icons.Default.Add, "Add Player", tint = Color.White, modifier = Modifier.size(iconSize).clickable {
-                    players = players + Player("New Player", players.first().initialTime, players.first().initialTime, getAvailableColor())
-                })
-            }
-
-        PlayerList(isEditingSettings, players) { updatedPlayers ->
-            players = updatedPlayers
-            // We may need to change the background color
-            setBackgroundColor()
-            setButtonColor(isRunning)
         }
     }
 }
@@ -298,15 +320,6 @@ fun EverySecond(everySecond: () -> Unit) {
             delay(1000)
             everySecond()
         }
-    }
-}
-
-@Composable
-fun HideStatusBarScreen() {
-    val systemUiController = rememberSystemUiController()
-
-    LaunchedEffect(Unit) {
-        systemUiController.isStatusBarVisible = false  // Hide status bar
     }
 }
 
